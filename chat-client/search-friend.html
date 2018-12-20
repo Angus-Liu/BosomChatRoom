@@ -1,0 +1,58 @@
+<!doctype html>
+<html>
+	<head>
+		<meta charset="UTF-8">
+		<title></title>
+		<meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no" />
+		<link href="css/mui.min.css" rel="stylesheet" />
+		<link rel="stylesheet" type="text/css" href="css/header.css" />
+	</head>
+	
+	<body>
+		<header class="mui-bar mui-bar-nav title">
+			<a class="mui-action-back mui-icon mui-icon-left-nav mui-pull-left" style="color: white;"></a>
+			<a id="link-submit-search" class="mui-icon mui-icon-right-nav mui-pull-right" style="color: white;font-size: 14px;line-height: 25px;">搜索</a>
+			<h1 class="mui-title title-color">添加朋友</h1>
+		</header>
+		<div class="mui-content">
+			<div class="mui-input-row">
+				<input id="txt-friend-username" type="text" class="mui-input-speech mui-input-clear" placeholder="搜索朋友">
+			</div>
+		</div>
+		
+		<script src="js/mui.min.js"></script>
+		<script src="js/app.js"></script>
+		<script type="text/javascript">
+			mui.init()
+			mui.plusReady(function() {
+				var txtFriendUsername = document.getElementById("txt-friend-username");
+				// 提交事件，搜索朋友
+				var linkSubmitSearch = document.getElementById("link-submit-search");
+				linkSubmitSearch.addEventListener("tap", function() {
+					var user = app.getUserGlobalInfo();
+					var friendUsername = txtFriendUsername.value;
+					plus.nativeUI.showWaiting("请稍等...");
+					mui.ajax(`${app.serverUrl}/user/search?userId=${user.id}&friendUsername=${friendUsername}`, {
+						dataType: 'json',
+						type: 'get',
+						timeout: 10000,
+						success: function(data) {
+							plus.nativeUI.closeWaiting();
+							if (data.status == 200) {
+								mui.openWindow({
+									url: "search-friends-result.html",
+									id: "search-friends-result.html",
+									extras: {
+										willBeFriend: data.data
+									}
+								});
+							} else {
+								app.showToast(data.msg, "error");
+							}
+						}
+					});
+				});
+			});
+		</script>
+	</body>
+</html>

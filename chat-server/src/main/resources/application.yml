@@ -1,0 +1,35 @@
+server:
+  # 端口配置
+  port: 8080
+spring:
+  # 数据源配置
+  datasource:
+    url: jdbc:mysql://localhost:3306/ticky-chat-dev?useSSL=false&serverTimezone=Asia/Shanghai
+    username: root
+    password: root
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+# MyBatis 配置
+mybatis:
+  type-aliases-package: com.tickychat.server.pojo
+  mapper-locations: classpath:mapper/*.xml
+# 通用 mapper 配置
+mapper:
+  mappers: com.tickychat.server.common.utils.mybatis.MyMapper
+  not-empty: false
+  identity: MYSQL
+# 分页插件配置
+pagehelper:
+  helper-dialect: mysql
+  support-methods-arguments: true
+  params:
+    count: countSql
+
+# Log 配置
+logging:
+  level:
+    com.tickychat.server: debug
+
+# 文件存储配置
+storage:
+  path: D:/Temp/sticky/

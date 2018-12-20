@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.tickychat.server.mapper.CustomMapper">
+    <select id="queryFriendRequest" resultType="com.tickychat.server.pojo.vo.RequestVO" parameterType="string">
+        SELECT r.id                AS id,
+               u.id                AS sendUserId,
+               u.username          AS sendUsername,
+               u.face_image        AS sendFaceImage,
+               u.nickname          AS sendNickname,
+               r.request_date_time AS requestDateTime
+        FROM request r
+                 LEFT JOIN user u
+                           ON r.send_user_id = u.id
+        WHERE r.accept_user_id = #{acceptUserId}
+    </select>
+
+    <select id="queryFriend" resultType="com.tickychat.server.pojo.vo.FriendVO">
+        SELECT f.id             AS id,
+               f.friend_user_id AS friendUserId,
+               u.username       AS friendUsername,
+               u.face_image     AS friendFaceImage,
+               u.nickname       AS friendNickname
+        FROM friend f
+                 LEFT JOIN user u
+                           ON f.friend_user_id = u.id
+        WHERE f.user_id = #{userId}
+    </select>
+
+    <update id="batchUpdateMsgSignFlag" parameterType="list">
+        UPDATE msg
+        SET sign_flag = 1
+        WHERE id IN
+        <foreach collection="list" item="item" index="index" open="(" separator="," close=")">
+            #{item}
+        </foreach>
+    </update>
+</mapper>

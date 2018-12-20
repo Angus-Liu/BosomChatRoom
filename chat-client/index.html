@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no" />
+		<title></title>
+		<script src="js/mui.min.js"></script>
+		<link href="css/mui.min.css" rel="stylesheet" />
+		<link href="css/header.css" rel="stylesheet" />
+		<link href="iconfont/iconfont.css" rel="stylesheet" />
+		<script type="text/javascript" charset="utf-8">
+			mui.init();
+
+			mui.plusReady(function() {
+				// 设置手机标题栏样式
+				plus.navigator.setStatusBarStyle("light");
+				plus.navigator.setStatusBarBackground("#c9394a");
+			});
+		</script>
+	</head>
+
+	<body>
+		<header class="mui-bar mui-bar-nav title">
+			<h1 id="sticky-title" class="mui-title title-color"><b>Ticky Chat (在线)</b></h1>
+		</header>
+		<nav class="mui-bar mui-bar-tab">
+			<a class="mui-tab-item mui-active" tabindex="0">
+				<span class="mui-icon iconfont icon-WeChat"></span>
+				<span class="mui-tab-label">聊天</span>
+			</a>
+			<a class="mui-tab-item" tabindex="1">
+				<span class="mui-icon iconfont icon-tongxunlu"></span>
+				<span class="mui-tab-label">通讯录</span>
+			</a>
+			<a class="mui-tab-item" tabindex="2">
+				<span class="mui-icon iconfont icon-faxian"></span>
+				<span class="mui-tab-label">发现</span>
+			</a>
+			<a class="mui-tab-item" tabindex="3">
+				<span class="mui-icon iconfont icon-weibiaoti--"></span>
+				<span class="mui-tab-label">我的</span>
+			</a>
+		</nav>
+
+		<script type="text/javascript" charset="utf-8">
+			var pageArray = [{
+				pageId: "chatlist.html",
+				pageUrl: "chatlist.html"
+			}, {
+				pageId: "contact.html",
+				pageUrl: "contact.html"
+			}, {
+				pageId: "discover.html",
+				pageUrl: "discover.html"
+			}, {
+				pageId: "me.html",
+				pageUrl: "me.html"
+			}];
+
+			var pageStyle = {
+				top: "44px",
+				bottom: "50px"
+			};
+
+			mui.plusReady(function() {
+				// 禁用返回按键
+				mui.back = function() {
+					return false;
+				}
+				// 对网络状态进行监听
+				netChangeSwitch();
+				// 获取当前的 webview 对象
+				var indexWebview = plus.webview.currentWebview();
+				// 为当前的主页 webview 追加子页的 webview 对象
+				pageArray.map(page => {
+					var pageWebview = plus.webview.create(page.pageUrl, page.pageId, pageStyle);
+					// 隐藏 webview 窗口
+					pageWebview.hide();
+					// 追加每一个子页面到当前主页面
+					indexWebview.append(pageWebview);
+				});
+				// 默认显示第一个页面
+				plus.webview.show(pageArray[0].pageId);
+				// 批量绑定 tab 事件,展示不同的页面
+				mui(".mui-bar-tab").on("tap", "a", function() {
+					var tabindex = this.getAttribute("tabindex");
+					plus.webview.show(pageArray[tabindex].pageId, "fade-in", 200);
+					// 隐藏其他页面
+					pageArray.map((page, index) => {
+						if (index != tabindex) {
+							plus.webview.hide(page.pageId, "fade-out", 200);
+						}
+					});
+				});
+				indexWebview.addEventListener("show", function() {
+					console.log("indexWebview - show");
+					setTimeout("initData()", "100");
+				});
+			});
+
+			// 监听网络状态
+			function netChangeSwitch() {
+				document.addEventListener("netchange", function() {
+					var connectionStatus = plus.networkinfo.getCurrentType();
+					var stickyTitle = document.getElementById("sticky-title");
+					if (connectionStatus != 0 && connectionStatus != 1) {
+						stickyTitle.innerHTML = "<b>Ticky Chat (在线)</b>";
+					} else {
+						stickyTitle.innerHTML = "<b>Ticky Chat (离线)</b>";
+					}
+				});
+			}
+
+			// 预加载
+			function initData() {
+				console.log("indexWebview - initData()");
+				var chatlistWebview = plus.webview.getWebviewById("chatlist.html");
+				mui.fire(chatlistWebview, "refresh");
+				var contactWebview = plus.webview.getWebviewById("contact.html");
+				mui.fire(contactWebview, "refresh");
+				var meWebview = plus.webview.getWebviewById("me.html");
+				mui.fire(meWebview, "refresh");
+			}
+		</script>
+	</body>
+</html>

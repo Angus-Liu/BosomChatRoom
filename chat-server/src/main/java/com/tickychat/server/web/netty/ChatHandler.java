@@ -1,0 +1,139 @@
+package com.tickychat.server.web.netty;
+
+import com.tickychat.server.common.enums.ContentAction;
+import com.tickychat.server.common.utils.JsonUtil;
+import com.tickychat.server.pojo.Msg;
+import com.tickychat.server.web.netty.bean.ChatMsg;
+import com.tickychat.server.web.netty.bean.Content;
+import com.tickychat.server.web.service.UserService;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandler.Sharable;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.SimpleChannelInboundHandler;
+import io.netty.channel.group.ChannelGroup;
+import io.netty.channel.group.DefaultChannelGroup;
+import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
+import io.netty.util.concurrent.GlobalEventExecutor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+
+import java.util.Arrays;
+import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
+
+/**
+ * 自定义处理消息的 Handler
+ * TextWebSocketFrame 在 netty 中专门用于为 websocket 处理文本的对象，frame 是消息的载体
+ *
+ * @author Angus
+ * @date 2018/12/13
+ */
+@Slf4j
+@Component
+public class ChatHandler extends SimpleChannelInboundHandler<TextWebSocketFrame> {
+    /**
+     * 用于记录和管理所有客户端的 channel
+     */
+    public static ChannelGroup channelGroup = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE);
+
+    /**
+     * 用于记录和管理 userId 与 channel 关系
+     */
+    private static ConcurrentHashMap<String, Channel> userIdChannelMap = new ConcurrentHashMap<>();
+
+    @Autowired
+    private UserService userService;
+
+    @Override
+    protected void channelRead0(ChannelHandlerContext ctx, TextWebSocketFrame msgFrame) throws Exception {
+        Channel channel = ctx.channel();
+        // 获取客户端传输过来的消息
+        Content content = JsonUtil.toObj(msgFrame.text(), Content.class);
+        // log.debug("[{}] 发送消息：{}", channel.remoteAddress(), content);
+        if (content != null) {
+            // 根据消息类型，进行不同的业务
+            int action = content.getAction();
+            switch (ContentAction.of(action)) {
+                // 连接：建立连接时，将 channel 与 userId 进行进行关联
+                case CONNECT: {
+                    ChatMsg chatMsg = content.getChatMsg();
+                    String userId = chatMsg.getSendUserId();
+                    log.debug("CONNECT 消息: userId={}, channel={}", userId, channel.id().asShortText());
+                    userIdChannelMap.put(userId, channel);
+                    // TODO：查询数据库中未发送信息，进行发送
+                    break;
+                }
+                // 聊天：把聊天记录保存到数据，并标记消息的签收状态为未签收
+                case CHAT: {
+                    // 保存
+                    ChatMsg chatMsg = content.getChatMsg();
+                    log.debug("CHAT 消息: chatMsg={}", chatMsg);
+                    Msg msg = userService.saveMsg(chatMsg);
+                    chatMsg.setMsgId(msg.getId());
+                    chatMsg.setSendTime(msg.getCreateTime());
+                    // 发送
+                    String acceptUserId = chatMsg.getAcceptUserId();
+                    Channel acceptChannel = userIdChannelMap.get(acceptUserId);
+                    if (acceptChannel == null) {
+                        // TODO：消息推送
+                    } else {
+                        if (channelGroup.contains(acceptChannel)) {
+                            // 用户在线
+                            acceptChannel.writeAndFlush(JsonUtil.toJson(chatMsg));
+                        } else {
+                            // 用户离线，移除关联
+                            userIdChannelMap.remove(acceptUserId);
+                            // TODO：消息推送
+                        }
+                    }
+                    break;
+                }
+                // 签收：针对具体的消息进行签收，标记消息的签收状态为已签收
+                case SIGNED: {
+                    // 扩展字段在 SIGNED 类型的消息中，代表需要进行签收的消息 ID，多个时使用逗号分隔
+                    String extend = content.getExtend();
+                    String[] msgIdArr = extend.split(",");
+                    List<String> msgIdList = Arrays.stream(msgIdArr)
+                            .filter(msgId -> !"".equals(msgId))
+                            .collect(Collectors.toList());
+                    log.debug("SIGNED 消息: msgIdArr={}, msgIdList={}", Arrays.toString(msgIdArr), msgIdList);
+                    userService.updateMsgSignFlag(msgIdList);
+                    break;
+                }
+                // 心跳：心跳消息，维持连接
+                case KEEP_ALIVE: {
+                    ChatMsg chatMsg = content.getChatMsg();
+                    String userId = chatMsg.getSendUserId();
+                    log.debug("KEEP_ALIVE 消息: userId={}", userId);
+                    break;
+                }
+                default:
+            }
+
+        }
+    }
+
+    @Override
+    public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+        // 当客户端连接服务端之后，获取客户端的 channel，放到 ChannelGroup 中进行管理
+        channelGroup.add(ctx.channel());
+        log.debug("客户端连接: channel={}", ctx.channel().id().asShortText());
+    }
+
+    @Override
+    public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
+        // 当触发 handlerRemoved 方法时，从 ChannelGroup 移除对应的客户端的 channel
+        channelGroup.remove(ctx.channel());
+        log.debug("客户端断开: channel={}", ctx.channel().id().asShortText());
+    }
+
+    @Override
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+        log.error("Websocket 发生异常", cause);
+        // 关闭 channel 并移除
+        ctx.channel().close();
+        channelGroup.remove(ctx.channel());
+    }
+}

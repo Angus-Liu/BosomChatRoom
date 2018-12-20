@@ -1,0 +1,99 @@
+<!doctype html>
+<html>
+	<head>
+		<meta charset="utf-8">
+		<title></title>
+		<meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no" />
+		<link href="css/mui.css" rel="stylesheet" />
+		<link href="css/header.css" rel="stylesheet" />
+	</head>
+	
+	<body>
+		<header class="mui-bar mui-bar-nav title">
+			<a class="mui-action-back mui-icon mui-icon-left-nav mui-pull-left" style="color: #FFF;"></a>
+			<a id="open-menu" class="mui-icon mui-pull-right" style="color: #FFF;">...</a>
+			<h1 class="mui-title title-color">个人头像</h1>
+		</header>
+		<div class="mui-content">
+			<img id="img-my-face" style="width: 100%;" />
+		</div>
+		<div id="sheet-my-face" class="mui-popover mui-popover-bottom mui-popover-action ">
+			<!-- 可选择菜单 -->
+			<ul class="mui-table-view">
+				<li class="mui-table-view-cell">
+					<a id="link-choose-photo" href="#">选择照片</a>
+				</li>
+				<li class="mui-table-view-cell">
+					<a id="link-save-photo" href="#">下载照片</a>
+				</li>
+			</ul>
+			<!-- 取消菜单 -->
+			<ul class="mui-table-view">
+				<li class="mui-table-view-cell">
+					<a href="#sheet-my-face"><b>取消</b></a>
+				</li>
+			</ul>
+		</div>
+		
+		<script src="js/app.js"></script>
+		<script src="js/mui.js"></script>
+		<script type="text/javascript">
+			mui.init()
+			mui.plusReady(function() {
+				refreshFace();
+				// 添加自定义事件，刷新头像
+				window.addEventListener("refresh", function() {
+					console.log("myFaceWebview - refresh");
+					refreshFace();
+				});
+				var openMenu = document.getElementById("open-menu");
+				openMenu.addEventListener("tap", function() {
+					mui("#sheet-my-face").popover("toggle");
+				});
+				var linkChoosePhoto = document.getElementById("link-choose-photo");
+				linkChoosePhoto.addEventListener("tap", function() {
+					mui.openWindow({
+						url: "plugin/cropper/myface-uploader.html",
+						id: "plugin/cropper/myface-uploader.html",
+						createNew: true
+					});
+					mui("#sheet-my-face").popover("toggle");
+				});
+				var linkSavePhoto = document.getElementById("link-save-photo");
+				linkSavePhoto.addEventListener("tap", function() {
+					plus.nativeUI.showWaiting("下载中...");
+					var user = app.getUserGlobalInfo();
+					var faceImage = user.faceImageBig;
+					var dtast = plus.downloader.createDownload(app.imgServerUrl + faceImage, {},
+						function(downloadFile, status) {
+							plus.nativeUI.closeWaiting();
+							if (status == 200) {
+								var tempFile = downloadFile.filename;
+								// 通过相册api保存照片到本地相册
+								plus.gallery.save(tempFile, function() {
+									app.showToast("保存照片成功！", "success");
+								})
+							} else {
+								app.showToast("下载错误...", "error");
+							}
+						}
+					);
+					dtast.start(); // 启动下载任务
+				});
+			});
+
+			function refreshFace() {
+				console.log("myFaceWebview - refreshFace");
+				var user = app.getUserGlobalInfo();
+				var imgMyFace = document.getElementById("img-my-face");
+
+				if (user != null) {
+					var faceImage = user.faceImage;
+					if (app.isNotNull(faceImage)) {
+						imgMyFace.src = app.imgServerUrl + faceImage;
+					}
+				}
+			}
+		</script>
+	</body>
+</html>

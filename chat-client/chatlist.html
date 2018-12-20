@@ -1,0 +1,160 @@
+<!doctype html>
+<html>
+	<head>
+		<meta charset="utf-8">
+		<title></title>
+		<meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no" />
+		<link href="css/mui.css" rel="stylesheet" />
+	</head>
+
+	<body>
+		<div class="mui-content">
+			<ul class="mui-table-view" id="ul-friend-request-list" style="margin-bottom: 10px;"></ul>
+		</div>
+
+		<script src="js/mui.js"></script>
+		<script src="js/app.js"></script>
+		<script type="text/javascript">
+			mui.init();
+			mui.plusReady(function() {
+				var currentWebview = plus.webview.currentWebview();
+				currentWebview.addEventListener("show", function() {
+					console.log("chatlistWebview - show");
+					loadingFriendRequest();
+				});
+				window.addEventListener("refresh", function() {
+					console.log("chatlistWebview - refresh");
+					loadingFriendRequest();
+					// CHAT.init();
+				});
+				CHAT.init();
+			});
+			// 配置 websocket
+			window.CHAT = {
+				socket: null,
+				init: function() {
+					if (CHAT.socket != null && CHAT.socket != undefined &&
+						(CHAT.socket.readyState == WebSocket.CONNECTING || CHAT.socket.readyState == WebSocket.OPEN)) {
+						return;
+					}
+					CHAT.socket = new WebSocket(app.nettyServerUrl);
+					CHAT.socket.onopen = CHAT.onopen;
+					CHAT.socket.onmessage = CHAT.onmessage;
+					CHAT.socket.onclose = CHAT.onclose;
+					CHAT.socket.onerror = CHAT.onerror;
+				},
+				send: function(msg) {
+					console.log(`WebSocket 发送消息：${msg}`);
+					if (CHAT.socket != null && CHAT.socket != undefined && CHAT.socket.readyState == WebSocket.OPEN) {
+						CHAT.socket.send(msg);
+					} else {
+						CHAT.init();
+						// 消息存缓存
+						app.pushUnsentMessageList(msg);
+					}
+				},
+				onopen: function() {
+					console.log("WebSocket 连接建立...");
+					var user = app.getUserGlobalInfo();
+					// 发送 CONNECT 消息
+					var chatMsg = new app.ChatMsg(user.id, null, null, null);
+					var content = new app.Content(app.CONNECT, chatMsg, null);
+					CHAT.socket.send(JSON.stringify(content));
+					// 发送缓存中未发送消息
+					app.popUnsentMessageList().forEach(msg => CHAT.socket.send(msg));
+					// TODO: 开启心跳
+				},
+				onmessage: function(e) {
+					console.log("WebSocket 接收到消息：" + e.data);
+					var chatWebview = plus.webview.getWebviewById("chatting-1812196KBYDDCRGC");
+					chatWebview.evalJS("receiveMsg('" + e.data + "')");
+				},
+				onclose: function() {
+					console.log("WebSocket 连接关闭...");
+					// TODO: 断线重连
+				},
+				onerror: function() {
+					console.log("WebSocket 发生错误...");
+				}
+			};
+
+			function loadingFriendRequest() {
+				console.log("chatlistWebview - loadingFriendRequest");
+				var user = app.getUserGlobalInfo();
+				mui.ajax(`${app.serverUrl}/user/query-friend-request?userId=${user.id}`, {
+					dataType: 'json',
+					type: 'get',
+					timeout: 10000,
+					success: function(data) {
+						if (data.status == 200) {
+							console.log("chatlistWebview - request: " + JSON.stringify(data.data));
+							var ulFriendRequestList = document.getElementById("ul-friend-request-list");
+							ulFriendRequestList.innerHTML = renderFriendRequest(data.data);
+							mui(".btn-operation").on("tap", ".ignore-request", function(e) {
+								var friendId = CHAT.getAttribute("friendId");
+								var requestId = CHAT.getAttribute("requestId");
+								operateFriendRequest(0, requestId, user.id, friendId);
+							});
+							mui(".btn-operation").on("tap", ".pass-request", function(e) {
+								var friendId = CHAT.getAttribute("friendId");
+								var requestId = CHAT.getAttribute("requestId");
+								operateFriendRequest(1, requestId, user.id, friendId);
+							});
+						} else {
+							app.showToast(data.msg, "error");
+						}
+					}
+				});
+			}
+
+			function operateFriendRequest(operationType, requestId, acceptUserId, sendUserId) {
+				console.log(
+					`operationType: ${operationType}, requestId: ${requestId}, acceptUserId: ${acceptUserId}, sendUserId: ${sendUserId}`
+				);
+				mui.ajax(
+					`${app.serverUrl}/user/operate-friend-request?operationType=${operationType}&requestId=${requestId}&acceptUserId=${acceptUserId}&sendUserId=${sendUserId}`, {
+						dataType: 'json',
+						type: 'get',
+						timeout: 10000,
+						success: function(data) {
+							if (data.status == 200) {
+								if (operationType == 0) {
+									app.showToast("忽略该好友请求", "error");
+								} else {
+									app.setContactList(data.data);
+									mui.fire(plus.webview.getWebviewById("contact.html"), "refresh");
+									app.showToast("通过该好友请求", "success");
+								}
+								loadingFriendRequest();
+							} else {
+								app.showToast(data.msg, "error");
+							}
+						}
+					});
+			}
+
+			function renderFriendRequest(friendRequestList) {
+				var html = "";
+				if (friendRequestList != null && friendRequestList.length > 0) {
+					friendRequestList.map(function(friendRequest) {
+						html +=
+							`<li class="btn-operation mui-table-view-cell mui-media">
+								<a href="javascript:;">
+									<img class="mui-media-object mui-pull-left" src=${app.imgServerUrl + friendRequest.sendFaceImage}>
+									<span id="span-nickname" class="mui-pull-right">
+										<button requestId=${friendRequest.id} friendId=${friendRequest.sendUserId} type="button" class="ignore-request mui-btn mui-btn-grey" style="padding: 4px 10px;margin-right:5px;">忽略</button>
+										<button requestId=${friendRequest.id} friendId=${friendRequest.sendUserId} type="button" class="pass-request mui-btn mui-btn-danger" style="padding: 4px 10px;">通过</button>
+									</span>
+									<div class="mui-media-body">
+										<label>${friendRequest.sendNickname}</label>
+										<p class="mui-ellipsis">请求添加你为好友</p>
+									</div>
+								</a>
+							</li>`;
+					});
+				}
+				return html;
+			}
+		</script>
+	</body>
+</html>
