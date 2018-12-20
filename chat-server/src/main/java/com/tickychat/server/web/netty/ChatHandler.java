@@ -31,6 +31,7 @@ import java.util.stream.Collectors;
  * @date 2018/12/13
  */
 @Slf4j
+@Sharable
 @Component
 public class ChatHandler extends SimpleChannelInboundHandler<TextWebSocketFrame> {
     /**
@@ -58,11 +59,15 @@ public class ChatHandler extends SimpleChannelInboundHandler<TextWebSocketFrame>
             switch (ContentAction.of(action)) {
                 // 连接：建立连接时，将 channel 与 userId 进行进行关联
                 case CONNECT: {
+                    // 建立关联
                     ChatMsg chatMsg = content.getChatMsg();
                     String userId = chatMsg.getSendUserId();
                     log.debug("CONNECT 消息: userId={}, channel={}", userId, channel.id().asShortText());
                     userIdChannelMap.put(userId, channel);
-                    // TODO：查询数据库中未发送信息，进行发送
+                    // 获取未签收信息并发送
+                    userService.queryUnsignedMsg(userId)
+                            .forEach(msg -> channel
+                                    .writeAndFlush(new TextWebSocketFrame(JsonUtil.toJson(msg))));
                     break;
                 }
                 // 聊天：把聊天记录保存到数据，并标记消息的签收状态为未签收
@@ -76,16 +81,14 @@ public class ChatHandler extends SimpleChannelInboundHandler<TextWebSocketFrame>
                     // 发送
                     String acceptUserId = chatMsg.getAcceptUserId();
                     Channel acceptChannel = userIdChannelMap.get(acceptUserId);
-                    if (acceptChannel == null) {
-                        // TODO：消息推送
-                    } else {
+                    if (acceptChannel != null) {
                         if (channelGroup.contains(acceptChannel)) {
                             // 用户在线
-                            acceptChannel.writeAndFlush(JsonUtil.toJson(chatMsg));
+                            acceptChannel.writeAndFlush(new TextWebSocketFrame(JsonUtil.toJson(chatMsg)));
+                            log.debug("CHAT 消息发送成功");
                         } else {
                             // 用户离线，移除关联
                             userIdChannelMap.remove(acceptUserId);
-                            // TODO：消息推送
                         }
                     }
                     break;

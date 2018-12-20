@@ -126,4 +126,12 @@ public interface UserService {
      * @param msgIdList
      */
     void updateMsgSignFlag(List<String> msgIdList);
+
+    /**
+     * 查询为接收消息
+     *
+     * @param acceptUserId
+     * @return
+     */
+    List<ChatMsg> queryUnsignedMsg(String acceptUserId);
 }

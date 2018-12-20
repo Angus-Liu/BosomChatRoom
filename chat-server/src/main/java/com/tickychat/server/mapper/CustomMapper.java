@@ -4,6 +4,7 @@ import com.tickychat.server.pojo.User;
 import com.tickychat.server.pojo.vo.FriendVO;
 import com.tickychat.server.pojo.vo.RequestVO;
 import com.tickychat.server.common.utils.mybatis.MyMapper;
+import com.tickychat.server.web.netty.bean.ChatMsg;
 
 import java.util.List;
 
@@ -30,4 +31,12 @@ public interface CustomMapper extends MyMapper<User> {
      * @param msgIdList
      */
     void batchUpdateMsgSignFlag(List<String>  msgIdList);
+
+    /**
+     * 查询为签收消息
+     *
+     * @param acceptUseId
+     * @return
+     */
+    List<ChatMsg> queryUnsignedMsg(String acceptUseId);
 }

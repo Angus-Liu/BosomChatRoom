@@ -26,6 +26,17 @@
         WHERE f.user_id = #{userId}
     </select>
 
+    <select id="queryUnsignedMsg" resultType="com.tickychat.server.web.netty.bean.ChatMsg">
+        SELECT m.id             AS msgId,
+               m.send_user_id   AS sendUserId,
+               m.accept_user_id AS acceptUserId,
+               m.msg            AS msg,
+               m.create_time    AS sendTime
+        FROM msg m
+        WHERE accept_user_id = #{acceptUseId}
+          AND sign_flag = 0;
+    </select>
+
     <update id="batchUpdateMsgSignFlag" parameterType="list">
         UPDATE msg
         SET sign_flag = 1

@@ -199,6 +199,11 @@ public class UserServiceImpl implements UserService {
         }
     }
 
+    @Override
+    public List<ChatMsg> queryUnsignedMsg(String acceptUserId) {
+        return customMapper.queryUnsignedMsg(acceptUserId);
+    }
+
     @Transactional(propagation = Propagation.SUPPORTS)
     public User queryUserById(String userId) {
         return userMapper.selectByPrimaryKey(userId);

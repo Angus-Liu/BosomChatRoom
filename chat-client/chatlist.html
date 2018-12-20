@@ -66,8 +66,13 @@
 				},
 				onmessage: function(e) {
 					console.log("WebSocket 接收到消息：" + e.data);
-					var chatWebview = plus.webview.getWebviewById("chatting-1812196KBYDDCRGC");
-					chatWebview.evalJS("receiveMsg('" + e.data + "')");
+					var chatMsg = JSON.parse(e.data);
+					// 根据消息的发送者 id,调用对应的 webview 的接收消息方法
+					var chatWebview = plus.webview.getWebviewById(`chatting-${chatMsg.sendUserId}`);
+					if (chatWebview != null) {
+						chatWebview.evalJS("receiveMsg('" + chatMsg.msg + "')");
+						chatWebview.evalJS("resizeScreen()");
+					}
 				},
 				onclose: function() {
 					console.log("WebSocket 连接关闭...");
