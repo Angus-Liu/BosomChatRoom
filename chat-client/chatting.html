@@ -23,7 +23,9 @@
 	<body contextmenu="return false;">
 		<header class="mui-bar mui-bar-nav title" style="position: fixed;">
 			<a class="mui-action-back mui-icon mui-icon-left-nav mui-pull-left title-color"></a>
-			<h1 class="mui-title title-color"><b id="chatting-nickname">慕 信</b></h1>
+			<h1 class="mui-title title-color">
+				<b id="chatting-nickname">Ticky</b>
+			</h1>
 		</header>
 		<div id="msg-outter" class="mui-content">
 			<div id='msg'></div>
@@ -92,27 +94,11 @@
 						app.showToast("请检查网络连接...", "error");
 						return;
 					}
-					// 获取消息内容
-					var msgTextVal = msgText.value;
-					// 判断消息内容，如果长度等于0，则return
-					if (msgTextVal.length === 0) {
-						return;
-					}
-					// 发送消息, 渲染消息的html到msg div之下
-					sendMsg(msgTextVal);
+					sendMsg(msgText.value);
 					// 清空消息文本框中的内容
 					msgText.value = "";
-					// msgText.focus();
-					// 发送消息完毕之后，把发送按钮的颜色改为灰白色
+					// 把发送按钮的颜色改为灰白色
 					send.setAttribute("class", "mui-btn-gray");
-					// 调用websocket 发送消息到netty后端
-					var chatMsg = new app.ChatMsg(user.id, friendUserId, msgTextVal, null);
-					var content = new app.Content(app.CHAT, chatMsg, null);
-					var wsWebview = plus.webview.getWebviewById("chatlist.html");
-					wsWebview.evalJS("CHAT.send('" + JSON.stringify(content) + "')");
-					// 保存聊天历史记录到本地缓存
-					app.saveUserChatHistory(user.id, friendUserId, msgTextVal, true);
-					app.saveUserChatSnapshot(user.id, friendUserId, msgTextVal, true);
 				});
 			});
 
@@ -126,10 +112,23 @@
 
 			// 发送消息
 			function sendMsg(msg) {
+				// 判断消息内容，如果长度等于0，则return
+				if (msg.length === 0) {
+					return;
+				}
+				// 发送消息, 渲染消息的html到msg div之下
 				var msgHtml = renderChatBubble(user.faceImage, msg, true);
 				var msgList = document.getElementById("msg");
 				msgList.insertAdjacentHTML("beforeend", msgHtml);
 				playSendMsgSound();
+				// 调用websocket 发送消息到netty后端
+				var chatMsg = new app.ChatMsg(user.id, friendUserId, msg, null);
+				var content = new app.Content(app.CHAT, chatMsg, null);
+				var wsWebview = plus.webview.getWebviewById("chatlist.html");
+				wsWebview.evalJS("CHAT.send('" + JSON.stringify(content) + "')");
+				// 保存聊天历史记录到本地缓存
+				app.saveUserChatHistory(user.id, friendUserId, msg, true);
+				app.saveUserChatSnapshot(user.id, friendUserId, msg, true);
 			}
 
 			// 播放发送消息的铃声
@@ -154,16 +153,15 @@
 			// 初始化用户的聊天记录
 			function initChatHistory() {
 				var chatHistoryList = app.getUserChatHistory(user.id, friendUserId);
-				var togetherHTML = "";
-				for (var i = 0; i < chatHistoryList.length; i++) {
-					var chatHistory = chatHistoryList[i];
+				var msgListHtml = "";
+				chatHistoryList.forEach(chatHistory => {
 					if (chatHistory.isSend) {
-						togetherHTML += renderChatBubble(user.faceImage, chatHistory.msg, true);
+						msgListHtml += renderChatBubble(user.faceImage, chatHistory.msg, true);
 					} else {
-						togetherHTML += renderChatBubble(friendFaceImage, chatHistory.msg, false);
+						msgListHtml += renderChatBubble(friendFaceImage, chatHistory.msg, false);
 					}
-				}
-				document.getElementById("msg").innerHTML = togetherHTML;
+				});
+				document.getElementById("msg").innerHTML = msgListHtml;
 			}
 
 			// 渲染聊天气泡
