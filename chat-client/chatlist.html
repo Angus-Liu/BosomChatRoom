@@ -50,7 +50,7 @@
 					} else {
 						CHAT.init();
 						// 消息存缓存
-						app.pushUnsentMessageList(msg);
+						app.saveUnsentMessageList(msg);
 					}
 				},
 				onopen: function() {
@@ -61,17 +61,40 @@
 					var content = new app.Content(app.CONNECT, chatMsg, null);
 					CHAT.socket.send(JSON.stringify(content));
 					// 发送缓存中未发送消息
-					app.popUnsentMessageList().forEach(msg => CHAT.socket.send(msg));
+					app.readUnsentMessageList().forEach(msg => CHAT.socket.send(msg));
 					// TODO: 开启心跳
 				},
 				onmessage: function(e) {
-					console.log("WebSocket 接收到消息：" + e.data);
-					var chatMsg = JSON.parse(e.data);
-					// 根据消息的发送者 id,调用对应的 webview 的接收消息方法
-					var chatWebview = plus.webview.getWebviewById(`chatting-${chatMsg.sendUserId}`);
-					if (chatWebview != null) {
-						chatWebview.evalJS("receiveMsg('" + chatMsg.msg + "')");
-						chatWebview.evalJS("resizeScreen()");
+					console.log(`WebSocket 接收到消息`);
+					var content = JSON.parse(e.data);
+					// 根据消息类型,执行不同业务
+					switch(content.action) {
+						case app.CHAT: {
+							// 渲染聊天界面
+							console.log(`CHAT 消息：${e.data}`)
+							var chatMsg = content.chatMsg;
+							// 根据消息的发送者 id,调用对应的 webview 的接收消息方法
+							var chatWebview = plus.webview.getWebviewById(`chatting-${chatMsg.sendUserId}`);
+							if (chatWebview != null) {
+								chatWebview.evalJS(`receiveMsg('${chatMsg.msg}')`);
+								chatWebview.evalJS("resizeScreen()");
+							}
+							// 存储聊天记录
+							app.saveUserChatHistory(chatMsg.acceptUserId, chatMsg.sendUserId, chatMsg.msg, false);
+							// 签收消息(单签)
+							var content = new app.Content(app.SIGNED, null, chatMsg.msgId);
+							CHAT.send(JSON.stringify(content)); 
+							break;
+						}
+						case app.PULL_FRIEND: {
+							// 拉取好友信息
+							console.log(`PULL_FRIEND 消息：${e.data}`)
+							mui.fire(plus.webview.getWebviewById("contact.html"), "refresh");
+							break;
+						}
+						default: {
+							console.log(`未知类型消息：${e.data}`)
+						}
 					}
 				},
 				onclose: function() {
@@ -83,6 +106,9 @@
 				}
 			};
 
+			/**
+			 * 加载好友请求
+			 */
 			function loadingFriendRequest() {
 				console.log("chatlistWebview - loadingFriendRequest");
 				var user = app.getUserGlobalInfo();
@@ -96,13 +122,13 @@
 							var ulFriendRequestList = document.getElementById("ul-friend-request-list");
 							ulFriendRequestList.innerHTML = renderFriendRequest(data.data);
 							mui(".btn-operation").on("tap", ".ignore-request", function(e) {
-								var friendId = CHAT.getAttribute("friendId");
-								var requestId = CHAT.getAttribute("requestId");
+								var friendId = this.getAttribute("friendId");
+								var requestId = this.getAttribute("requestId");
 								operateFriendRequest(0, requestId, user.id, friendId);
 							});
 							mui(".btn-operation").on("tap", ".pass-request", function(e) {
-								var friendId = CHAT.getAttribute("friendId");
-								var requestId = CHAT.getAttribute("requestId");
+								var friendId = this.getAttribute("friendId");
+								var requestId = this.getAttribute("requestId");
 								operateFriendRequest(1, requestId, user.id, friendId);
 							});
 						} else {

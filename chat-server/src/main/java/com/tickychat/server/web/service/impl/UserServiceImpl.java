@@ -1,5 +1,6 @@
 package com.tickychat.server.web.service.impl;
 
+import com.tickychat.server.common.enums.ContentAction;
 import com.tickychat.server.common.enums.SearchFriendStatus;
 import com.tickychat.server.common.enums.SignFlag;
 import com.tickychat.server.common.utils.Md5Util;
@@ -11,7 +12,9 @@ import com.tickychat.server.pojo.Request;
 import com.tickychat.server.pojo.User;
 import com.tickychat.server.pojo.vo.FriendVO;
 import com.tickychat.server.pojo.vo.RequestVO;
+import com.tickychat.server.web.netty.ChatHandler;
 import com.tickychat.server.web.netty.bean.ChatMsg;
+import com.tickychat.server.web.netty.bean.Content;
 import com.tickychat.server.web.service.UserService;
 import org.n3r.idworker.Sid;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -51,6 +54,9 @@ public class UserServiceImpl implements UserService {
     @Autowired
     private CustomMapper customMapper;
 
+    @Autowired
+    private ChatHandler chatHandler;
+
     @Transactional(propagation = Propagation.SUPPORTS)
     @Override
     public boolean queryUsernameIsExist(String username) {
@@ -77,12 +83,12 @@ public class UserServiceImpl implements UserService {
         user.setId(userId);
         user.setPassword(Md5Util.encode(user.getPassword()));
         user.setNickname(user.getUsername());
-        user.setFaceImage("");
-
+        user.setFaceImage("avatar/default-avatar.png");
+        // 生成二维码
         String qrCodeName = "qrcode/" + userId + ".png";
         QRCodeUtil.createQRCode(storagePath + qrCodeName, "sticky-chat-user:" + user.getUsername());
         user.setQrcode(qrCodeName);
-
+        // 插入数据库
         userMapper.insert(user);
         return user;
     }
@@ -170,6 +176,10 @@ public class UserServiceImpl implements UserService {
         saveFriend(sendUserId, acceptUserId);
         // 删除好友请求
         deleteFriendRequest(requestId);
+        // 使用 websocket 主动推送消息到请求发起者，通知其更新通讯录
+        Content content = new Content();
+        content.setAction(ContentAction.PULL_FRIEND.code);
+        chatHandler.sendTo(sendUserId, content);
     }
 
     @Transactional(propagation = Propagation.SUPPORTS)

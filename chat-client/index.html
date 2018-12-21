@@ -114,12 +114,9 @@
 			// 预加载
 			function initData() {
 				console.log("indexWebview - initData()");
-				var chatlistWebview = plus.webview.getWebviewById("chatlist.html");
-				mui.fire(chatlistWebview, "refresh");
-				var contactWebview = plus.webview.getWebviewById("contact.html");
-				mui.fire(contactWebview, "refresh");
-				var meWebview = plus.webview.getWebviewById("me.html");
-				mui.fire(meWebview, "refresh");
+				mui.fire(plus.webview.getWebviewById("chatlist.html"), "refresh");
+				mui.fire(plus.webview.getWebviewById("contact.html"), "refresh");
+				mui.fire(plus.webview.getWebviewById("me.html"), "refresh");
 			}
 		</script>
 	</body>

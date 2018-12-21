@@ -92,9 +92,9 @@ window.app = {
 
 	/**
 	 * 根据用户id，从本地的缓存（联系人列表）中获取朋友的信息
-	 * @param {Object} friendId
+	 * @param {Object} friendUserId
 	 */
-	getFriendFromContactList: function(friendId) {
+	getFriendFromContactList: function(friendUserId) {
 		var contactListStr = plus.storage.getItem("contactList");
 
 		// 判断contactListStr是否为空
@@ -103,7 +103,7 @@ window.app = {
 			var contactList = JSON.parse(contactListStr);
 			for (var i = 0; i < contactList.length; i++) {
 				var friend = contactList[i];
-				if (friend.friendUserId == friendId) {
+				if (friend.friendUserId == friendUserId) {
 					return friend;
 					break;
 				}
@@ -116,129 +116,100 @@ window.app = {
 
 	/**
 	 * 保存用户的聊天记录
-	 * @param {Object} myId
-	 * @param {Object} friendId
+	 * @param {Object} userId
+	 * @param {Object} friendUserId
 	 * @param {Object} msg
-	 * @param {Object} flag	判断本条消息是我发送的，还是朋友发送的，1:我  2:朋友
+	 * @param {Object} isSend 判断消息是 user 发送的还是接收的
 	 */
-	saveUserChatHistory: function(myId, friendId, msg, flag) {
-		var me = this;
-		var chatKey = "chat-" + myId + "-" + friendId;
-
+	saveUserChatHistory: function(userId, friendUserId, msg, isSend) {
+		var chatKey = `chat-${userId}-${friendUserId}`;
 		// 从本地缓存获取聊天记录是否存在
 		var chatHistoryListStr = plus.storage.getItem(chatKey);
-		var chatHistoryList;
-		if (me.isNotNull(chatHistoryListStr)) {
-			// 如果不为空
+		var chatHistoryList = [];
+		if (this.isNotNull(chatHistoryListStr)) {
 			chatHistoryList = JSON.parse(chatHistoryListStr);
-		} else {
-			// 如果为空，赋一个空的list
-			chatHistoryList = [];
 		}
-
 		// 构建聊天记录对象
-		var singleMsg = new me.ChatHistory(myId, friendId, msg, flag);
-
-		// 向list中追加msg对象
-		chatHistoryList.push(singleMsg);
-
+		var chatHistory = new this.ChatHistory(userId, friendUserId, msg, isSend);
+		chatHistoryList.push(chatHistory);
 		plus.storage.setItem(chatKey, JSON.stringify(chatHistoryList));
 	},
 
 	/**
-	 * 获取用户聊天记录
-	 * @param {Object} myId
-	 * @param {Object} friendId
+	 * 获取聊天记录
+	 * @param {Object} userId
+	 * @param {Object} friendUserId
 	 */
-	getUserChatHistory: function(myId, friendId) {
-		var me = this;
-		var chatKey = "chat-" + myId + "-" + friendId;
+	getUserChatHistory: function(userId, friendUserId) {
+		var chatKey = `chat-${userId}-${friendUserId}`;
 		var chatHistoryListStr = plus.storage.getItem(chatKey);
-		var chatHistoryList;
-		if (me.isNotNull(chatHistoryListStr)) {
-			// 如果不为空
+		var chatHistoryList = [];
+		if (this.isNotNull(chatHistoryListStr)) {
 			chatHistoryList = JSON.parse(chatHistoryListStr);
-		} else {
-			// 如果为空，赋一个空的list
-			chatHistoryList = [];
 		}
-
 		return chatHistoryList;
 	},
 
-	// 删除我和朋友的聊天记录
-	deleteUserChatHistory: function(myId, friendId) {
-		var chatKey = "chat-" + myId + "-" + friendId;
+	// 删除聊天记录
+	deleteUserChatHistory: function(userId, friendUserId) {
+		var chatKey = `chat-${userId}-${friendUserId}`;
 		plus.storage.removeItem(chatKey);
 	},
 
 	/**
 	 * 聊天记录的快照，仅仅保存每次和朋友聊天的最后一条消息
-	 * @param {Object} myId
-	 * @param {Object} friendId
+	 * @param {Object} userId
+	 * @param {Object} friendUserId
 	 * @param {Object} msg
 	 * @param {Object} isRead
 	 */
-	saveUserChatSnapshot: function(myId, friendId, msg, isRead) {
-		var me = this;
-		var chatKey = "chat-snapshot" + myId;
-
+	saveUserChatSnapshot: function(userId, friendUserId, msg, isRead) {
+		var chatKey = `chat-snapshot${userId}`;
 		// 从本地缓存获取聊天快照的list
 		var chatSnapshotListStr = plus.storage.getItem(chatKey);
-		var chatSnapshotList;
-		if (me.isNotNull(chatSnapshotListStr)) {
+		var chatSnapshotList = [];
+		if (this.isNotNull(chatSnapshotListStr)) {
 			// 如果不为空
 			chatSnapshotList = JSON.parse(chatSnapshotListStr);
-			// 循环快照list，并且判断每个元素是否包含（匹配）friendId，如果匹配，则删除
+			// 循环快照list，并且判断每个元素是否包含（匹配）friendUserId，如果匹配，则删除
 			for (var i = 0; i < chatSnapshotList.length; i++) {
-				if (chatSnapshotList[i].friendId == friendId) {
-					// 删除已经存在的friendId所对应的快照对象
+				if (chatSnapshotList[i].friendUserId == friendUserId) {
+					// 删除已经存在的friendUserId所对应的快照对象
 					chatSnapshotList.splice(i, 1);
 					break;
 				}
 			}
-		} else {
-			// 如果为空，赋一个空的list
-			chatSnapshotList = [];
 		}
-
 		// 构建聊天快照对象
-		var singleMsg = new me.ChatSnapshot(myId, friendId, msg, isRead);
-
+		var singleMsg = new this.ChatSnapshot(userId, friendUserId, msg, isRead);
 		// 向list中追加快照对象
 		chatSnapshotList.unshift(singleMsg);
-
 		plus.storage.setItem(chatKey, JSON.stringify(chatSnapshotList));
 	},
 
 	/**
 	 * 获取用户快照记录列表
 	 */
-	getUserChatSnapshot: function(myId) {
-		var me = this;
-		var chatKey = "chat-snapshot" + myId;
+	getUserChatSnapshot: function(userId) {
+		var chatKey = `chat-snapshot${userId}`;
 		// 从本地缓存获取聊天快照的list
 		var chatSnapshotListStr = plus.storage.getItem(chatKey);
-		var chatSnapshotList;
-		if (me.isNotNull(chatSnapshotListStr)) {
+		var chatSnapshotList = [];
+		if (this.isNotNull(chatSnapshotListStr)) {
 			// 如果不为空
 			chatSnapshotList = JSON.parse(chatSnapshotListStr);
-		} else {
-			// 如果为空，赋一个空的list
-			chatSnapshotList = [];
 		}
-
 		return chatSnapshotList;
 	},
 
 	/**
 	 * 删除本地的聊天快照记录
-	 * @param {Object} myId
-	 * @param {Object} friendId
+	 * @param {Object} userId
+	 * @param {Object} friendUserId
 	 */
-	deleteUserChatSnapshot: function(myId, friendId) {
+	deleteUserChatSnapshot: function(userId, friendUserId) {
 		var me = this;
-		var chatKey = "chat-snapshot" + myId;
+		var chatKey = "chat-snapshot" + userId;
 
 		// 从本地缓存获取聊天快照的list
 		var chatSnapshotListStr = plus.storage.getItem(chatKey);
@@ -246,10 +217,10 @@ window.app = {
 		if (me.isNotNull(chatSnapshotListStr)) {
 			// 如果不为空
 			chatSnapshotList = JSON.parse(chatSnapshotListStr);
-			// 循环快照list，并且判断每个元素是否包含（匹配）friendId，如果匹配，则删除
+			// 循环快照list，并且判断每个元素是否包含（匹配）friendUserId，如果匹配，则删除
 			for (var i = 0; i < chatSnapshotList.length; i++) {
-				if (chatSnapshotList[i].friendId == friendId) {
-					// 删除已经存在的friendId所对应的快照对象
+				if (chatSnapshotList[i].friendUserId == friendUserId) {
+					// 删除已经存在的friendUserId所对应的快照对象
 					chatSnapshotList.splice(i, 1);
 					break;
 				}
@@ -264,23 +235,23 @@ window.app = {
 
 	/**
 	 * 标记未读消息为已读状态
-	 * @param {Object} myId
-	 * @param {Object} friendId
+	 * @param {Object} userId
+	 * @param {Object} friendUserId
 	 */
-	readUserChatSnapshot: function(myId, friendId) {
+	readUserChatSnapshot: function(userId, friendUserId) {
 		var me = this;
-		var chatKey = "chat-snapshot" + myId;
+		var chatKey = "chat-snapshot" + userId;
 		// 从本地缓存获取聊天快照的list
 		var chatSnapshotListStr = plus.storage.getItem(chatKey);
 		var chatSnapshotList;
 		if (me.isNotNull(chatSnapshotListStr)) {
 			// 如果不为空
 			chatSnapshotList = JSON.parse(chatSnapshotListStr);
-			// 循环这个list，判断是否存在好友，比对friendId，
+			// 循环这个list，判断是否存在好友，比对friendUserId，
 			// 如果有，在list中的原有位置删除该 快照 对象，然后重新放入一个标记已读的快照对象
 			for (var i = 0; i < chatSnapshotList.length; i++) {
 				var item = chatSnapshotList[i];
-				if (item.friendId == friendId) {
+				if (item.friendUserId == friendUserId) {
 					item.isRead = true; // 标记为已读
 					chatSnapshotList.splice(i, 1, item); // 替换原有的快照
 					break;
@@ -331,53 +302,57 @@ window.app = {
 
 	/**
 	 * 单个聊天记录的对象
-	 * @param {Object} myId
-	 * @param {Object} friendId
+	 * @param {Object} userId
+	 * @param {Object} friendUserId
 	 * @param {Object} msg
-	 * @param {Object} flag
+	 * @param {Object} isSend
 	 */
-	ChatHistory: function(myId, friendId, msg, flag) {
-		this.myId = myId;
-		this.friendId = friendId;
+	ChatHistory: function(userId, friendUserId, msg, isSend) {
+		this.userId = userId;
+		this.friendUserId = friendUserId;
 		this.msg = msg;
-		this.flag = flag;
+		this.isSend = isSend;
 	},
 
 	/**
 	 * 快照对象
-	 * @param {Object} myId
-	 * @param {Object} friendId
+	 * @param {Object} userId
+	 * @param {Object} friendUserId
 	 * @param {Object} msg
 	 * @param {Object} isRead	用于判断消息是否已读还是未读
 	 */
-	ChatSnapshot: function(myId, friendId, msg, isRead) {
-		this.myId = myId;
-		this.friendId = friendId;
+	ChatSnapshot: function(userId, friendUserId, msg, isRead) {
+		this.userId = userId;
+		this.friendUserId = friendUserId;
 		this.msg = msg;
 		this.isRead = isRead;
 	},
 
-	popUnsentMessageList: function() {
-		var unsentMessageList = plus.storage.getItem("unsentMessageList");
+	/**
+	 * 读取未发送成功的消息
+	 */
+	readUnsentMessageList: function() {
+		var unsentMessageListStr = plus.storage.getItem("unsentMessageList");
 		plus.storage.removeItem("unsentMessageList");
-		if (unsentMessageList == null) {
-			unsentMessageList = [];
-		} else {
-			unsentMessageList = JSON.parse(unsentMessageList);
+		var unsentMessageList = [];
+		if (unsentMessageListStr != null) {
+			unsentMessageList = JSON.parse(unsentMessageListStr);
 		}
-		console.log(`popUnsentMessageList: ${unsentMessageList}`);
+		console.log(`readUnsentMessageList: ${unsentMessageList}`);
 		return unsentMessageList;
 	},
 
-	pushUnsentMessageList: function(msg) {
-		var unsentMessageList = plus.storage.getItem("unsentMessageList");
-		if (unsentMessageList == null) {
-			unsentMessageList = [];
-		} else {
-			unsentMessageList = JSON.parse(unsentMessageList);
+	/**
+	 * 保存未发送成功的消息
+	 */
+	saveUnsentMessageList: function(msg) {
+		var unsentMessageListStr = plus.storage.getItem("unsentMessageList");
+		var unsentMessageList = [];
+		if (unsentMessageListStr != null) {
+			unsentMessageList = JSON.parse(unsentMessageListStr);
 		}
 		unsentMessageList.push(msg);
 		plus.storage.setItem("unsentMessageList", JSON.stringify(unsentMessageList));
-		console.log(`pushUnsentMessageList: ${unsentMessageList}`);
+		console.log(`saveUnsentMessageList: ${unsentMessageList}`);
 	}
 }

@@ -14,6 +14,7 @@ public enum ContentAction {
     CHAT(2, "聊天消息"),
     SIGNED(3, "签收消息"),
     KEEP_ALIVE(4, "心跳消息"),
+    PULL_FRIEND(5, "拉取好友消息"),
     ;
 
     public final int code;

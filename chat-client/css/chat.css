@@ -1,25 +1,25 @@
 /*图片气泡*/
-.friend-lists {
+.left-lists {
 	margin: 0 50px 0px 10px;
 	position: relative;
 }
 
-.friend-lists .header-img {
+.left-lists .header-img {
 	position: absolute;
 	top: 5px;
 }
 
-.me-lists {
+.right-lists {
 	position: relative;
 	margin: 0 10px 0px 50px;
 }
 
-.me-lists .msg {
+.right-lists .msg {
 	float: right;
 	margin-right: 73px;
 }
 
-.me-lists .header-img {
+.right-lists .header-img {
 	position: absolute;
 	top: 5px;
 	right: 0px;

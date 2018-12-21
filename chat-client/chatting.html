@@ -45,10 +45,9 @@
 			var friendUserId;
 			var friendNickname;
 			var friendFaceImage;
+			var user;
 			mui.plusReady(function() {
-				// 获取我自己的用户信息
-				var me = app.getUserGlobalInfo();
-				// 获取聊天页面webview
+				user = app.getUserGlobalInfo();
 				var chattingWebview = plus.webview.currentWebview();
 				// 设置聊天页面的软键盘样式
 				chattingWebview.setStyle({
@@ -100,50 +99,34 @@
 						return;
 					}
 					// 发送消息, 渲染消息的html到msg div之下
-					sendMsg(me.faceImage, msgTextVal);
+					sendMsg(msgTextVal);
 					// 清空消息文本框中的内容
 					msgText.value = "";
 					// msgText.focus();
 					// 发送消息完毕之后，把发送按钮的颜色改为灰白色
 					send.setAttribute("class", "mui-btn-gray");
 					// 调用websocket 发送消息到netty后端
-					var chatMsg = new app.ChatMsg(me.id, friendUserId, msgTextVal, null);
+					var chatMsg = new app.ChatMsg(user.id, friendUserId, msgTextVal, null);
 					var content = new app.Content(app.CHAT, chatMsg, null);
 					var wsWebview = plus.webview.getWebviewById("chatlist.html");
 					wsWebview.evalJS("CHAT.send('" + JSON.stringify(content) + "')");
 					// 保存聊天历史记录到本地缓存
-					app.saveUserChatHistory(me.id, friendUserId, msgTextVal, 1);
-					app.saveUserChatSnapshot(me.id, friendUserId, msgTextVal, true);
+					app.saveUserChatHistory(user.id, friendUserId, msgTextVal, true);
+					app.saveUserChatSnapshot(user.id, friendUserId, msgTextVal, true);
 				});
 			});
 
 			// 接受消息
 			function receiveMsg(msg) {
-				var msgHtml =
-					`<div class="friend-lists">
-						<div class="header-img">
-							<img src=${app.imgServerUrl + friendFaceImage} width="40px" height="40px" />
-						</div>
-						<div class="msg-wrapper right">
-							<p class="msg-left-white" align="left">${msg}</p>
-						</div>
-					</div>`;
+				var msgHtml = renderChatBubble(friendFaceImage, msg, false);
 				var msgList = document.getElementById("msg");
 				msgList.insertAdjacentHTML("beforeend", msgHtml);
 				playReceiveMsgSound();
 			}
 
 			// 发送消息
-			function sendMsg(faceImg, msg) {
-				var msgHtml =
-					`<div class="me-lists">
-						<div class="header-img">
-							<img src=${app.imgServerUrl + faceImg} width="40px" height="40px" />
-						</div>
-						<div class="msg-wrapper left">
-							<p class="msg-right-green" align="left">${msg}</p>
-						</div>
-					</div>`;
+			function sendMsg(msg) {
+				var msgHtml = renderChatBubble(user.faceImage, msg, true);
 				var msgList = document.getElementById("msg");
 				msgList.insertAdjacentHTML("beforeend", msgHtml);
 				playSendMsgSound();
@@ -170,35 +153,44 @@
 
 			// 初始化用户的聊天记录
 			function initChatHistory() {
-				var msgList = document.getElementById("msg");
-				var me = app.getUserGlobalInfo();
-				var myId = me.id;
-				var myFaceImg = me.faceImage;
-				var chatHistoryList = app.getUserChatHistory(myId, friendUserId);
+				var chatHistoryList = app.getUserChatHistory(user.id, friendUserId);
 				var togetherHTML = "";
 				for (var i = 0; i < chatHistoryList.length; i++) {
-					var singleMsg = chatHistoryList[i];
-					if (singleMsg.flag == 1) {
-						togetherHTML += '<div class="me-lists">' +
-							'<div class="header-img">' +
-							'<img src="' + app.imgServerUrl + myFaceImg + '" width="40px" height="40px" />' +
-							'</div>' +
-							'<div class="msg-wrapper left">' +
-							'<p class="msg-right-green">' + singleMsg.msg + '</p>' +
-							'</div>' +
-							'</div>';
+					var chatHistory = chatHistoryList[i];
+					if (chatHistory.isSend) {
+						togetherHTML += renderChatBubble(user.faceImage, chatHistory.msg, true);
 					} else {
-						togetherHTML += '<div class="friend-lists">' +
-							'<div class="header-img">' +
-							'<img src="' + app.imgServerUrl + friendFaceImage + '" width="40px" height="40px" />' +
-							'</div>' +
-							'<div class="msg-wrapper right">' +
-							'<p class="msg-left-white">' + singleMsg.msg + '</p>' +
-							'</div>' +
-							'</div>';
+						togetherHTML += renderChatBubble(friendFaceImage, chatHistory.msg, false);
 					}
 				}
-				msgList.innerHTML = togetherHTML;
+				document.getElementById("msg").innerHTML = togetherHTML;
+			}
+
+			// 渲染聊天气泡
+			function renderChatBubble(faceImage, msg, isRightChatBubble) {
+				var chatBubbleHtml;
+				if (isRightChatBubble) {
+					chatBubbleHtml =
+						`<div class="right-lists">
+							<div class="header-img">
+								<img src=${app.imgServerUrl+faceImage} width="40px" height="40px" />
+							</div>
+							<div class="msg-wrapper left">
+								<p class="msg-right-green" align="left">${msg}</p>
+							</div>
+						</div>`;
+				} else {
+					chatBubbleHtml =
+						`<div class="left-lists">
+							<div class="header-img">
+								<img src=${app.imgServerUrl+faceImage} width="40px" height="40px" />
+							</div>
+							<div class="msg-wrapper right">
+								<p class="msg-left-white" align="left">${msg}</p>
+							</div>
+						</div>`;
+				}
+				return chatBubbleHtml;
 			}
 		</script>
 	</body>

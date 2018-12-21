@@ -37,7 +37,7 @@ public class ChatHandler extends SimpleChannelInboundHandler<TextWebSocketFrame>
     /**
      * 用于记录和管理所有客户端的 channel
      */
-    public static ChannelGroup channelGroup = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE);
+    private static ChannelGroup channelGroup = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE);
 
     /**
      * 用于记录和管理 userId 与 channel 关系
@@ -57,46 +57,38 @@ public class ChatHandler extends SimpleChannelInboundHandler<TextWebSocketFrame>
             // 根据消息类型，进行不同的业务
             int action = content.getAction();
             switch (ContentAction.of(action)) {
-                // 连接：建立连接时，将 channel 与 userId 进行进行关联
                 case CONNECT: {
-                    // 建立关联
+                    // 连接：建立连接时，将 channel 与 userId 进行进行关联
                     ChatMsg chatMsg = content.getChatMsg();
                     String userId = chatMsg.getSendUserId();
                     log.debug("CONNECT 消息: userId={}, channel={}", userId, channel.id().asShortText());
                     userIdChannelMap.put(userId, channel);
                     // 获取未签收信息并发送
-                    userService.queryUnsignedMsg(userId)
-                            .forEach(msg -> channel
-                                    .writeAndFlush(new TextWebSocketFrame(JsonUtil.toJson(msg))));
+                    content.setAction(ContentAction.CHAT.code);
+                    userService.queryUnsignedMsg(userId).forEach(
+                            msg -> {
+                                content.setChatMsg(msg);
+                                // 注意，文本消息一定要是 TextWebSocketFrame 类型
+                                channel.writeAndFlush(new TextWebSocketFrame(JsonUtil.toJson(content)));
+                            });
                     break;
                 }
-                // 聊天：把聊天记录保存到数据，并标记消息的签收状态为未签收
                 case CHAT: {
-                    // 保存
+                    // 聊天：把聊天记录保存到数据，并标记消息的签收状态为未签收
                     ChatMsg chatMsg = content.getChatMsg();
                     log.debug("CHAT 消息: chatMsg={}", chatMsg);
                     Msg msg = userService.saveMsg(chatMsg);
                     chatMsg.setMsgId(msg.getId());
                     chatMsg.setSendTime(msg.getCreateTime());
-                    // 发送
+                    // 发送消息
                     String acceptUserId = chatMsg.getAcceptUserId();
-                    Channel acceptChannel = userIdChannelMap.get(acceptUserId);
-                    if (acceptChannel != null) {
-                        if (channelGroup.contains(acceptChannel)) {
-                            // 用户在线
-                            acceptChannel.writeAndFlush(new TextWebSocketFrame(JsonUtil.toJson(chatMsg)));
-                            log.debug("CHAT 消息发送成功");
-                        } else {
-                            // 用户离线，移除关联
-                            userIdChannelMap.remove(acceptUserId);
-                        }
-                    }
+                    sendTo(acceptUserId, content);
                     break;
                 }
-                // 签收：针对具体的消息进行签收，标记消息的签收状态为已签收
                 case SIGNED: {
-                    // 扩展字段在 SIGNED 类型的消息中，代表需要进行签收的消息 ID，多个时使用逗号分隔
+                    // 签收：针对具体的消息进行签收，标记消息的签收状态为已签收
                     String extend = content.getExtend();
+                    // 扩展字段在 SIGNED 类型的消息中，代表需要进行签收的消息 ID，多个时使用逗号分隔
                     String[] msgIdArr = extend.split(",");
                     List<String> msgIdList = Arrays.stream(msgIdArr)
                             .filter(msgId -> !"".equals(msgId))
@@ -113,8 +105,8 @@ public class ChatHandler extends SimpleChannelInboundHandler<TextWebSocketFrame>
                     break;
                 }
                 default:
+                    log.debug("未知消息类型");
             }
-
         }
     }
 
@@ -138,5 +130,24 @@ public class ChatHandler extends SimpleChannelInboundHandler<TextWebSocketFrame>
         // 关闭 channel 并移除
         ctx.channel().close();
         channelGroup.remove(ctx.channel());
+    }
+
+    /**
+     * 发送消息
+     *
+     * @param acceptUserId
+     * @param content
+     */
+    public void sendTo(String acceptUserId, Content content) {
+        Channel acceptChannel = userIdChannelMap.get(acceptUserId);
+        if (acceptChannel != null) {
+            if (channelGroup.contains(acceptChannel)) {
+                // 用户在线
+                acceptChannel.writeAndFlush(new TextWebSocketFrame(JsonUtil.toJson(content)));
+            } else {
+                // 用户离线，移除关联
+                userIdChannelMap.remove(acceptUserId);
+            }
+        }
     }
 }
