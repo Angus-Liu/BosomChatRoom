@@ -31,26 +31,26 @@ public class HttpAspect {
     public void doBefore(JoinPoint joinPoint) {
         ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
         HttpServletRequest request = attributes.getRequest();
-        logger.info("<---- Request ----");
+        logger.info("<-------- Request --------");
         logger.info("<--      HTTP: {} {}", request.getMethod(), request.getRequestURL());
         logger.info("<--        IP: {}", request.getRemoteAddr());
         logger.info("<-- SessionID: {}", request.getSession().getId());
         logger.info("<--    Method: {}", joinPoint.getSignature().getDeclaringTypeName() + "." + joinPoint.getSignature().getName());
         logger.info("<--      Args: {}", Arrays.toString(joinPoint.getArgs()));
-        logger.info("<-----------------");
+        logger.info("<-------------------------");
     }
 
     @AfterReturning(returning = "response", pointcut = "pointcut()")
     public void doAfterReturning(Object response) {
-        logger.info("---- Response ---->");
+        logger.info("-------- Response -------->");
         logger.info("-->    Result: {}", response);
-        logger.info("------------------>");
+        logger.info("-------------------------->");
     }
 
     @AfterThrowing(throwing = "exception", pointcut = "pointcut()")
     public void doAfterThrowing(Exception exception) {
-        logger.info("---- Response ---->");
+        logger.info("-------- Response -------->");
         logger.info("--> Exception: {}", exception.getMessage());
-        logger.info("------------------>");
+        logger.info("-------------------------->");
     }
 }

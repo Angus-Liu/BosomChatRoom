@@ -95,11 +95,67 @@
 			];
 			// 构建通讯录二维数组模型
 			//  contactArray = [[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[], []];
-			var contactArray =[[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[]];
+			var contactArray = [
+				[],
+				[],
+				[],
+				[],
+				[],
+				[],
+				[],
+				[],
+				[],
+				[],
+				[],
+				[],
+				[],
+				[],
+				[],
+				[],
+				[],
+				[],
+				[],
+				[],
+				[],
+				[],
+				[],
+				[],
+				[],
+				[],
+				[]
+			];
 			// 清空通讯录模型数组
 			function clearContactArray() {
 				//  contactArray = [[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[]];
-				contactArray = [[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[]];
+				contactArray = [
+					[],
+					[],
+					[],
+					[],
+					[],
+					[],
+					[],
+					[],
+					[],
+					[],
+					[],
+					[],
+					[],
+					[],
+					[],
+					[],
+					[],
+					[],
+					[],
+					[],
+					[],
+					[],
+					[],
+					[],
+					[],
+					[],
+					[]
+				];
 			}
 			// 获取英文字母所在数组的位置
 			function getOrderOfEnWords(enChar) {
@@ -138,17 +194,14 @@
 						var nicknameStarter = enWords[i];
 						contactHtml +=
 							`<li data-group=${nicknameStarter} class='mui-table-view-divider mui-indexed-list-group'>${nicknameStarter}</li>`;
-						for (var j = 0; j < friendArray.length; j++) {
+						friendArray.forEach(friend => {
 							contactHtml +=
-								`<li friendUserId=${friendArray[j].friendUserId}
-									 friendNickname=${friendArray[j].friendNickname}
-									 friendFaceImage=${friendArray[j].friendFaceImage}
-									 class="chat-with-friend mui-media mui-table-view-cell mui-indexed-list-item"
-									 style="padding: 8px 10px;">
-									<img class="mui-media-object mui-pull-left" style="max-width: 35px;height: 35px;" src=${app.imgServerUrl+friendArray[j].friendFaceImage}/>
-									<div class="mui-media-body" style="line-height: 35px;">${friendArray[j].friendNickname}</div>
+								`<li class="chat-with-friend mui-media mui-table-view-cell mui-indexed-list-item" style="padding: 8px 10px;"
+									 friendUserId=${friend.friendUserId} friendNickname=${friend.friendNickname} friendFaceImage=${friend.friendFaceImage}>
+									<img class="mui-media-object mui-pull-left" style="max-width: 35px;height: 35px;" src=${app.imgServerUrl+friend.friendFaceImage}/>
+									<div class="mui-media-body" style="line-height: 35px;">${friend.friendNickname}</div>
 								</li>`;
-						}
+						});
 					}
 				}
 				// 渲染html
@@ -170,7 +223,7 @@
 							friendFaceImage: friendFaceImage
 						}
 					});
-				})
+				});
 			}
 			// 获取后端所有好友列表
 			function fetchContactList() {
@@ -184,6 +237,7 @@
 						if (data.status === 200) {
 							var contactList = data.data;
 							console.log('chatlistWebview - contactList: ' + JSON.stringify(contactList));
+							// 保存好友列表
 							app.setContactList(contactList);
 						}
 					}

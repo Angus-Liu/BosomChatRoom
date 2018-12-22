@@ -104,7 +104,7 @@
 
 			// 接受消息
 			function receiveMsg(msg) {
-				var msgHtml = renderChatBubble(friendFaceImage, msg, false);
+				var msgHtml = renderChatBubble(msg, false);
 				var msgList = document.getElementById("msg");
 				msgList.insertAdjacentHTML("beforeend", msgHtml);
 				playReceiveMsgSound();
@@ -117,7 +117,7 @@
 					return;
 				}
 				// 发送消息, 渲染消息的html到msg div之下
-				var msgHtml = renderChatBubble(user.faceImage, msg, true);
+				var msgHtml = renderChatBubble(msg, true);
 				var msgList = document.getElementById("msg");
 				msgList.insertAdjacentHTML("beforeend", msgHtml);
 				playSendMsgSound();
@@ -126,7 +126,7 @@
 				var content = new app.Content(app.CHAT, chatMsg, null);
 				var wsWebview = plus.webview.getWebviewById("chatlist.html");
 				wsWebview.evalJS("CHAT.send('" + JSON.stringify(content) + "')");
-				// 保存聊天历史记录到本地缓存
+				// 保存聊天记录到聊天快照
 				app.saveUserChatHistory(user.id, friendUserId, msg, true);
 				app.saveUserChatSnapshot(user.id, friendUserId, msg, true);
 			}
@@ -152,26 +152,23 @@
 
 			// 初始化用户的聊天记录
 			function initChatHistory() {
+				console.log("initChatHistory");
 				var chatHistoryList = app.getUserChatHistory(user.id, friendUserId);
 				var msgListHtml = "";
 				chatHistoryList.forEach(chatHistory => {
-					if (chatHistory.isSend) {
-						msgListHtml += renderChatBubble(user.faceImage, chatHistory.msg, true);
-					} else {
-						msgListHtml += renderChatBubble(friendFaceImage, chatHistory.msg, false);
-					}
+					msgListHtml += renderChatBubble(chatHistory.msg, chatHistory.isSend);
 				});
 				document.getElementById("msg").innerHTML = msgListHtml;
 			}
 
 			// 渲染聊天气泡
-			function renderChatBubble(faceImage, msg, isRightChatBubble) {
+			function renderChatBubble(msg, isRightChatBubble) {
 				var chatBubbleHtml;
 				if (isRightChatBubble) {
 					chatBubbleHtml =
 						`<div class="right-lists">
 							<div class="header-img">
-								<img src=${app.imgServerUrl+faceImage} width="40px" height="40px" />
+								<img src=${app.imgServerUrl+user.faceImage} width="40px" height="40px" />
 							</div>
 							<div class="msg-wrapper left">
 								<p class="msg-right-green" align="left">${msg}</p>
@@ -181,7 +178,7 @@
 					chatBubbleHtml =
 						`<div class="left-lists">
 							<div class="header-img">
-								<img src=${app.imgServerUrl+faceImage} width="40px" height="40px" />
+								<img src=${app.imgServerUrl+friendFaceImage} width="40px" height="40px" />
 							</div>
 							<div class="msg-wrapper right">
 								<p class="msg-left-white" align="left">${msg}</p>

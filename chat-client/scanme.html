@@ -52,6 +52,7 @@
 						mui.alert(`无效参数: ${result}`);
 					} else {
 						var friendUsername = content[1];
+						console.log(`scanme - friendUsername:${friendUsername}`);
 						var user = app.getUserGlobalInfo();
 						plus.nativeUI.showWaiting("请稍等...");
 						mui.ajax(`${app.serverUrl}/user/search?userId=${user.id}&friendUsername=${friendUsername}`, {
