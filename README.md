@@ -7,4 +7,8 @@
 
 ## Screenshot
 
-![1545656521820](assets/1545656521820.png)
+<p align="center">
+	<img src="assets/1545657488598.png" alt="聊天&通讯录">
+	<img src="assets/1545657502567.png" alt="发现">
+	<img src="assets/1545657508861.png" alt="我的">
+</p>
