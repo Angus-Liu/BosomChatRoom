@@ -18,11 +18,7 @@ public class NettyBootstrap implements ApplicationListener<ContextRefreshedEvent
     @Override
     public void onApplicationEvent(ContextRefreshedEvent event) {
         if (event.getApplicationContext().getParent() == null) {
-            try {
-                webSocketServer.start();
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
+            webSocketServer.start();
         }
     }
 }

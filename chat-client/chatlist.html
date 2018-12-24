@@ -54,8 +54,8 @@
 					// CHAT.init();
 				});
 				CHAT.init();
-				
-				// 批量绑定点击事件
+
+				// 批量绑定点击事件 - 点击聊天快照进入聊天界面
 				mui("#ul-chat-snapshot").on("tap", ".chat-with-friend", function(e) {
 					var friendUserId = this.getAttribute("friendUserId");
 					var friendNickname = this.getAttribute("friendNickname");
@@ -72,6 +72,14 @@
 					});
 					// 更新快照状态
 					app.readUserChatSnapshot(user.id, friendUserId);
+					loadingChatSnapshot();
+				});
+
+				// 批量绑定点击事件 - 左滑删除聊天快照
+				mui("#ul-chat-snapshot").on("tap", "#link-delete-chat-snapshot", function(e) {
+					var friendUserId = this.getAttribute("friendUserId");
+					app.deleteUserChatSnapshot(user.id, friendUserId);
+					loadingChatSnapshot();
 				});
 			});
 			// 配置 websocket
@@ -88,28 +96,34 @@
 					CHAT.socket.onclose = CHAT.onclose;
 					CHAT.socket.onerror = CHAT.onerror;
 				},
-				send: function(msg) {
+				send: function(msg, isHeartBeat) {
 					console.log(`WebSocket 发送消息：${msg}`);
+
 					if (CHAT.socket != null && CHAT.socket != undefined && CHAT.socket.readyState == WebSocket.OPEN) {
 						CHAT.socket.send(msg);
+						// 渲染快照列表,后期需要优化,不应该放在这里
+						if(!isHeartBeat) {
+							loadingChatSnapshot();
+						}
 					} else {
 						CHAT.init();
-						// WebSocket 未连接时，消息存缓存
-						app.saveUnsentMessageList(msg);
+						// WebSocket 未连接时，消息存缓存(心跳消息不存)
+						if (!isHeartBeat) {
+							app.saveUnsentMessageList(msg);
+						}
 					}
-					// 渲染快照列表
-					loadingChatSnapshot();
 				},
 				onopen: function() {
 					console.log("WebSocket 连接建立...");
-					// 发送 CONNECT 消息
+					// 发送 CONNECT 消息(考虑移到刷新页面时，这样不同的用户登录也不用换channel)
 					var user = app.getUserGlobalInfo();
 					var chatMsg = new app.ChatMsg(user.id, null, null, null);
 					var content = new app.Content(app.CONNECT, chatMsg, null);
 					CHAT.socket.send(JSON.stringify(content));
 					// 发送缓存中未发送消息
 					app.readUnsentMessageList().forEach(msg => CHAT.socket.send(msg));
-					// TODO: 开启心跳
+					// 开启心跳
+					setInterval("CHAT.keepAlive()", 10000);
 				},
 				onmessage: function(e) {
 					console.log(`WebSocket 接收到消息`);
@@ -135,9 +149,8 @@
 							app.saveUserChatSnapshot(chatMsg.acceptUserId, chatMsg.sendUserId, chatMsg.msg, isRead);
 							// 渲染快照列表
 							loadingChatSnapshot();
-							// 签收消息(单签)
-							var content = new app.Content(app.SIGNED, null, chatMsg.msgId);
-							CHAT.send(JSON.stringify(content));
+							// 签收消息
+							CHAT.signMsg(chatMsg);
 							break;
 						case app.PULL_FRIEND:
 							// 拉取好友信息
@@ -154,6 +167,14 @@
 				},
 				onerror: function() {
 					console.log("WebSocket 发生错误...");
+				},
+				signMsg: function(chatMsg) {
+					var content = new app.Content(app.SIGNED, null, chatMsg.msgId);
+					CHAT.send(JSON.stringify(content), false);
+				},
+				keepAlive: function() {
+					var content = new app.Content(app.KEEP_ALIVE, null, null);
+					CHAT.send(JSON.stringify(content), true);
 				}
 			};
 
@@ -261,7 +282,7 @@
 						`<li class="chat-with-friend mui-table-view-cell mui-media"
 							 friendUserId=${friend.friendUserId} friendNickname=${friend.friendNickname} friendFaceImage=${friend.friendFaceImage}>
 							<div class="mui-slider-right mui-disabled">
-								<a class="mui-btn mui-btn-red">删除</a>
+								<a id="link-delete-chat-snapshot" class="mui-btn mui-btn-red" friendUserId=${friend.friendUserId}>删除</a>
 							</div>
 							<div class="mui-slider-handle mui-media-body">
 								<img class="mui-media-object mui-pull-left" src=${app.imgServerUrl+friend.friendFaceImage} />

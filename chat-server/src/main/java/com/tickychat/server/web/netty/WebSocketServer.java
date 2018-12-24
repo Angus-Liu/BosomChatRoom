@@ -9,8 +9,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
-import javax.annotation.Resource;
-
 /**
  * @author Angus
  * @date 2018/12/13
@@ -27,13 +25,13 @@ public class WebSocketServer {
 
     @Autowired
     public WebSocketServer(WebSocketServerInitializer webSocketServerInitializer) {
+        // TODO：为什么 WebSocketServerInitializer 无法以属性注入方式注入
         parentGroup = new NioEventLoopGroup();
         childGroup = new NioEventLoopGroup();
         serverBootstrap = new ServerBootstrap()
                 .group(parentGroup, childGroup)
                 .channel(NioServerSocketChannel.class)
                 .childHandler(webSocketServerInitializer);
-        // TODO：为什么 WebSocketServerInitializer 无法以属性注入方式注入
     }
 
     public void start() {

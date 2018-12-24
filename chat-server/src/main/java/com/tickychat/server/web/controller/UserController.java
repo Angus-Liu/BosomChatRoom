@@ -1,6 +1,6 @@
 package com.tickychat.server.web.controller;
 
-import com.tickychat.server.common.enums.FriendRequestOperationType;
+import com.tickychat.server.common.enums.RequestOperationType;
 import com.tickychat.server.common.enums.SearchFriendStatus;
 import com.tickychat.server.pojo.User;
 import com.tickychat.server.pojo.bo.UserBO;
@@ -162,8 +162,8 @@ public class UserController {
         if (operationType == null || StringUtils.isAnyBlank(requestId, acceptUserId, sendUserId)) {
             return JsonResult.error("参数错误！");
         }
-        FriendRequestOperationType requestOperationType = FriendRequestOperationType.of(operationType);
-        if (requestOperationType == FriendRequestOperationType.IGNORE) {
+        RequestOperationType requestOperationType = RequestOperationType.of(operationType);
+        if (requestOperationType == RequestOperationType.IGNORE) {
             userService.ignoreFriendRequest(requestId);
         } else {
             userService.passFriendRequest(requestId, acceptUserId, sendUserId);

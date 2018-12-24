@@ -238,12 +238,13 @@ window.app = {
 		var chatSnapshotListStr = plus.storage.getItem(chatKey);
 		var chatSnapshotList = [];
 		if (this.isNotNull(chatSnapshotListStr)) {
-			chatSnapshotList = JSON.parse(chatSnapshotListStr)
-			.forEach(chatSnapshot => {
+			chatSnapshotList = JSON.parse(chatSnapshotListStr);
+			chatSnapshotList.forEach(chatSnapshot => {
 				if(chatSnapshot.friendUserId == friendUserId) {
 					chatSnapshot.isRead = true;
 				}
 			});
+			// console.log(`readUserChatSnapshot: ${JSON.stringify(chatSnapshotList)}`)
 			plus.storage.setItem(chatKey, JSON.stringify(chatSnapshotList));
 		}
 	},

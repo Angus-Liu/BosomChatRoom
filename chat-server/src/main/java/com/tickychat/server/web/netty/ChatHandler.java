@@ -20,6 +20,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
@@ -65,8 +66,8 @@ public class ChatHandler extends SimpleChannelInboundHandler<TextWebSocketFrame>
                     userIdChannelMap.put(userId, channel);
                     // 获取未签收信息并发送
                     content.setAction(ContentAction.CHAT.code);
-                    userService.queryUnsignedMsg(userId).forEach(
-                            msg -> {
+                    userService.queryUnsignedMsg(userId)
+                            .forEach(msg -> {
                                 content.setChatMsg(msg);
                                 // 注意，文本消息一定要是 TextWebSocketFrame 类型
                                 channel.writeAndFlush(new TextWebSocketFrame(JsonUtil.toJson(content)));
@@ -81,8 +82,7 @@ public class ChatHandler extends SimpleChannelInboundHandler<TextWebSocketFrame>
                     chatMsg.setMsgId(msg.getId());
                     chatMsg.setSendTime(msg.getCreateTime());
                     // 发送消息
-                    String acceptUserId = chatMsg.getAcceptUserId();
-                    sendTo(acceptUserId, content);
+                    sendTo(chatMsg.getAcceptUserId(), content);
                     break;
                 }
                 case SIGNED: {
@@ -99,9 +99,7 @@ public class ChatHandler extends SimpleChannelInboundHandler<TextWebSocketFrame>
                 }
                 // 心跳：心跳消息，维持连接
                 case KEEP_ALIVE: {
-                    ChatMsg chatMsg = content.getChatMsg();
-                    String userId = chatMsg.getSendUserId();
-                    log.debug("KEEP_ALIVE 消息: userId={}", userId);
+                    log.debug("KEEP_ALIVE 消息: channel={}", channel.id().asShortText());
                     break;
                 }
                 default:
@@ -139,15 +137,15 @@ public class ChatHandler extends SimpleChannelInboundHandler<TextWebSocketFrame>
      * @param content
      */
     public void sendTo(String acceptUserId, Content content) {
-        Channel acceptChannel = userIdChannelMap.get(acceptUserId);
-        if (acceptChannel != null) {
-            if (channelGroup.contains(acceptChannel)) {
-                // 用户在线
-                acceptChannel.writeAndFlush(new TextWebSocketFrame(JsonUtil.toJson(content)));
-            } else {
-                // 用户离线，移除关联
-                userIdChannelMap.remove(acceptUserId);
-            }
-        }
+        Optional.ofNullable(userIdChannelMap.get(acceptUserId))
+                .ifPresent(acceptChannel -> {
+                    if (channelGroup.contains(acceptChannel)) {
+                        // 用户在线
+                        acceptChannel.writeAndFlush(new TextWebSocketFrame(JsonUtil.toJson(content)));
+                    } else {
+                        // 用户离线，移除关联
+                        userIdChannelMap.remove(acceptUserId);
+                    }
+                });
     }
 }

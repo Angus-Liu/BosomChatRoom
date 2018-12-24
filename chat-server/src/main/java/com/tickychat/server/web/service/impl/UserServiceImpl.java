@@ -28,6 +28,7 @@ import tk.mybatis.mapper.entity.Example.Criteria;
 
 import java.util.Date;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * @author Angus
@@ -115,10 +116,9 @@ public class UserServiceImpl implements UserService {
         criteria.andEqualTo("userId", userId);
         criteria.andEqualTo("friendUserId", friendUserResult.getId());
         Friend friendResult = friendMapper.selectOneByExample(myFriendExample);
-        if (friendResult != null) {
-            return SearchFriendStatus.ALREADY_FRIENDS;
-        }
-        return SearchFriendStatus.SUCCESS;
+        return Optional.ofNullable(friendResult)
+                .map((item) -> SearchFriendStatus.ALREADY_FRIENDS)
+                .orElse(SearchFriendStatus.SUCCESS);
     }
 
     @Transactional(propagation = Propagation.SUPPORTS)

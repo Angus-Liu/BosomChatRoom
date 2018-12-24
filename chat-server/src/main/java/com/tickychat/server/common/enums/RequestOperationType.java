@@ -6,7 +6,7 @@ import java.util.NoSuchElementException;
  * @author Angus
  * @date 2018/12/18
  */
-public enum FriendRequestOperationType {
+public enum RequestOperationType {
 
     /**
      * 忽略请求
@@ -21,13 +21,13 @@ public enum FriendRequestOperationType {
     public final int type;
     public final String msg;
 
-    FriendRequestOperationType(int type, String msg) {
+    RequestOperationType(int type, String msg) {
         this.type = type;
         this.msg = msg;
     }
 
-    public static FriendRequestOperationType of(int type) {
-        for (FriendRequestOperationType value : FriendRequestOperationType.values()) {
+    public static RequestOperationType of(int type) {
+        for (RequestOperationType value : RequestOperationType.values()) {
             if (value.type == type) {
                 return value;
             }
