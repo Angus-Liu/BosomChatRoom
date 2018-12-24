@@ -52,6 +52,10 @@
 					loadingFriendRequest();
 					loadingChatSnapshot();
 					// CHAT.init();
+					var user = app.getUserGlobalInfo();
+					var chatMsg = new app.ChatMsg(user.id, null, null, null);
+					var content = new app.Content(app.CONNECT, chatMsg, null);
+					CHAT.socket.send(JSON.stringify(content));
 				});
 				CHAT.init();
 

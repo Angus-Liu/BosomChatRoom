@@ -125,7 +125,7 @@
 				var chatMsg = new app.ChatMsg(user.id, friendUserId, msg, null);
 				var content = new app.Content(app.CHAT, chatMsg, null);
 				var wsWebview = plus.webview.getWebviewById("chatlist.html");
-				wsWebview.evalJS("CHAT.send('" + JSON.stringify(content) + "')");
+				wsWebview.evalJS(`CHAT.send('${JSON.stringify(content)}', false)`);
 				// 保存聊天记录到聊天快照
 				app.saveUserChatHistory(user.id, friendUserId, msg, true);
 				app.saveUserChatSnapshot(user.id, friendUserId, msg, true);
